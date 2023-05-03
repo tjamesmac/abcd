@@ -61,8 +61,6 @@ func initialModel() model {
 	ti.Width = 80
 	ti.SetValue(initialPath())
 
-	globalDirectory = lsd("-p")
-
 	keyMapper := make(map[tea.KeyType]KeyValues)
 
 	keyMapper[tea.KeyCtrlA] = KeyValues{value: "a", index: 0}
@@ -165,14 +163,12 @@ func lsd(path string) string {
 			// I got rid of this because it blowing everything up
 			// fmt.Println("Failed to run cmd:", err)
 			// os.Exit(1)
-			return globalDirectory
+			return ""
 		}
-
-		globalDirectory = string(output)
 
 		return string(output)
 	} else {
-		return globalDirectory
+		return ""
 	}
 
 }
@@ -192,10 +188,8 @@ func lsd3(m model, path string) string {
 			// I got rid of this because it blowing everything up
 			// fmt.Println("Failed to run cmd:", err)
 			// os.Exit(1)
-			return globalDirectory
+			return ""
 		}
-
-		globalDirectory = string(output)
 
 		list := strings.Split(string(output), "\n")
 		shortcutAppender := func(key tea.KeyType, i int, value string) {
@@ -218,7 +212,7 @@ func lsd3(m model, path string) string {
 
 		return strings.Join(list, "\n")
 	} else {
-		return globalDirectory
+		return ""
 	}
 
 }
