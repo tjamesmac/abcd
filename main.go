@@ -70,6 +70,10 @@ func makeKeyMaps() map[tea.KeyType]KeyValues {
 	return keyMapper
 }
 
+func lastCharacter(str string) string {
+	return string(str[len(str)-1])
+}
+
 func listDirectory(path string) string {
 	strippedPath := strings.TrimSuffix(path, "\n")
 	keyMaps := makeKeyMaps()
@@ -82,11 +86,47 @@ func listDirectory(path string) string {
 		if err != nil {
 			// I got rid of this because it blowing everything up
 			// fmt.Println("Failed to run cmd:", err)
+			previousOutput := strings.Split(strippedPath, "/")
+			something := strings.Join(previousOutput[:len(previousOutput)-1], "/")
 			// os.Exit(1)
-			return " ls error "
+			co := exec.Command("ls", something)
+
+			innerOutput, innerErr := co.Output()
+			if innerErr != nil {
+
+			}
+
+			var filtered = []string{}
+			for _, value := range strings.Split(string(innerOutput), "\n") {
+				if strings.HasPrefix(string(value), previousOutput[len(previousOutput)-1]) {
+					filtered = append(filtered, string(value))
+				}
+			}
+
+			shortcutAppender := func(key tea.KeyType, i int, value string) {
+				stripValue := strings.TrimPrefix(value, "\n")
+				if i == keyMaps[key].index && stripValue != "" {
+					key := keyMaps[key]
+					filtered[i] = key.value + " " + value
+				}
+			}
+
+			for i, value := range filtered {
+				shortcutAppender(tea.KeyCtrlA, i, value)
+				shortcutAppender(tea.KeyCtrlS, i, value)
+				shortcutAppender(tea.KeyCtrlD, i, value)
+				shortcutAppender(tea.KeyCtrlQ, i, value)
+				shortcutAppender(tea.KeyCtrlW, i, value)
+				shortcutAppender(tea.KeyCtrlE, i, value)
+				shortcutAppender(tea.KeyCtrlZ, i, value)
+				shortcutAppender(tea.KeyCtrlX, i, value)
+			}
+
+			return strings.Join(filtered, "\n")
 		}
 
 		list := strings.Split(string(output), "\n")
+
 		shortcutAppender := func(key tea.KeyType, i int, value string) {
 			stripValue := strings.TrimPrefix(value, "\n")
 			if i == keyMaps[key].index && stripValue != "" {
@@ -123,22 +163,11 @@ func initialModel() model {
 	ti.Width = 80
 	ti.SetValue(initialPath())
 
-	keyMapper := make(map[tea.KeyType]KeyValues)
-
-	keyMapper[tea.KeyCtrlA] = KeyValues{value: "a", index: 0}
-	keyMapper[tea.KeyCtrlS] = KeyValues{value: "s", index: 1}
-	keyMapper[tea.KeyCtrlD] = KeyValues{value: "d", index: 2}
-	keyMapper[tea.KeyCtrlQ] = KeyValues{value: "q", index: 3}
-	keyMapper[tea.KeyCtrlW] = KeyValues{value: "w", index: 4}
-	keyMapper[tea.KeyCtrlE] = KeyValues{value: "e", index: 5}
-	keyMapper[tea.KeyCtrlZ] = KeyValues{value: "z", index: 6}
-	keyMapper[tea.KeyCtrlX] = KeyValues{value: "x", index: 7}
-
 	return model{
 		textInput: ti,
 		path:      initialPath(),
 		directory: listDirectory(initialPath()),
-		keyMaps:   keyMapper,
+		keyMaps:   makeKeyMaps(),
 		err:       nil,
 	}
 }
@@ -176,20 +205,39 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			input := strings.Split(list, "\n")
 
 			var updateValue = m.textInput.Value()
-			if string(updateValue[len(updateValue)-1]) != "/" {
-				updateValue = updateValue + "/"
+
+			remove_tea_key := strings.Split(input[currentKey.index], " ")[1]
+
+			// if last character is not /
+			split_path := strings.Split(updateValue, "/")
+			path_after_last_slash := split_path[len(split_path)-1]
+			// if strings.HasPrefix(remove_tea_key, string(updateValue[len(updateValue)-1])) {
+			if strings.HasPrefix(remove_tea_key, path_after_last_slash) {
+				if string(updateValue[len(updateValue)-1]) != "/" {
+					// apparently i dont need this just yet
+					// updateValue = updateValue + "/"
+				}
+
+				// I am here and first letter prefixes work but multi letter ones dont
+				m.textInput.SetValue(strings.TrimSuffix(updateValue, path_after_last_slash) + remove_tea_key + "/")
+			} else {
+				if string(updateValue[len(updateValue)-1]) != "/" {
+					updateValue = updateValue + "/"
+				}
+				m.textInput.SetValue(updateValue + remove_tea_key + "/")
 			}
 
-			remove_tea_key := strings.Split(input[currentKey.index], " ")
-
-			m.textInput.SetValue(updateValue + remove_tea_key[1])
 			m.textInput.CursorEnd()
 
 			return m, cmd
 
 		case tea.KeyBackspace:
 			line := strings.Split(m.textInput.Value(), "/")
-			m.textInput.SetValue(strings.Join(line[:len(line)-1], "/"))
+			if lastCharacter(m.textInput.Value()) != "/" {
+				m.textInput.SetValue(strings.Join(line[:len(line)-1], "/") + "/")
+			} else {
+				m.textInput.SetValue(strings.Join(line[:len(line)-2], "/") + "/")
+			}
 			m.textInput.CursorEnd()
 			return m, cmd
 
