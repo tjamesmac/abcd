@@ -5,7 +5,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -21,10 +21,20 @@ type KeyValues struct {
 }
 
 func main() {
-	p := tea.NewProgram(initialModel())
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
+	p := tea.NewProgram(initialModel(), tea.WithOutput(os.Stderr))
+	// if _, err := p.Run(); err != nil {
+	// 	log.Fatal(err)
+	// }
+	m, err := p.Run()
+
+	if err != nil {
+
 	}
+
+	if m, ok := m.(model); ok && m.textInput.Value() != "" {
+		fmt.Printf("%s\n", m.textInput.Value())
+	}
+
 }
 
 type (
