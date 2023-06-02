@@ -1,4 +1,5 @@
 // Bug: going to a folder and pressing buttons on the left side of the keyboard togther caused a panic
+// Bug: not displaying the contents on the dir on first load
 // TODO - add some colour
 // TODO - add ctrl + backspace so i can delete the whole word and normal backspace to delete letters at a time
 package main
