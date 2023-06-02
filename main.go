@@ -1,9 +1,6 @@
+// TODO - search through strings that contain substrings
+// TODO - use to lower case so I dont have to type caps
 // TODO - add some colour
-// TODO - filter bigger lists, so like if there are twenty items add another character to filter the list
-
-// Log - I am making a map of the keys and their index and corresponding values so I don't have to write 20 if statements and switch cases
-// to do anything with the keys
-
 package main
 
 import (
@@ -42,7 +39,6 @@ type model struct {
 	keyMaps   map[tea.KeyType]KeyValues
 }
 
-// see what this is like
 func initialPath() string {
 	c := exec.Command("pwd")
 
@@ -77,19 +73,31 @@ func lastCharacter(str string) string {
 func listDirectory(path string) string {
 	strippedPath := strings.TrimSuffix(path, "\n")
 	keyMaps := makeKeyMaps()
+	shortcutAppender := func(list []string, key tea.KeyType, i int, value string) {
+		remove_newline := strings.TrimPrefix(value, "\n")
+		if i == keyMaps[key].index && remove_newline != "" {
+			key := keyMaps[key]
+			list[i] = key.value + " " + value
+		}
+	}
+
 	if strippedPath != "" {
 
 		c := exec.Command("ls", strippedPath)
 
 		output, err := c.Output()
 
+		// Putting a partial path into the ls command here causes an error
+		// e.g. ~/play/code/b
+		// the b represents the beginning of the bubble-tea directory
+		// the command cant handle that and errors out here
+		// this is where we then list the last path and then filter results
+		// TODO - check for this before executing the first ls
 		if err != nil {
-			// I got rid of this because it blowing everything up
-			// fmt.Println("Failed to run cmd:", err)
-			previousOutput := strings.Split(strippedPath, "/")
-			something := strings.Join(previousOutput[:len(previousOutput)-1], "/")
-			// os.Exit(1)
-			co := exec.Command("ls", something)
+			previous_output := strings.Split(strippedPath, "/")
+			previous_output_minus_after_slash := strings.Join(previous_output[:len(previous_output)-1], "/")
+
+			co := exec.Command("ls", previous_output_minus_after_slash)
 
 			innerOutput, innerErr := co.Output()
 			if innerErr != nil {
@@ -98,28 +106,20 @@ func listDirectory(path string) string {
 
 			var filtered = []string{}
 			for _, value := range strings.Split(string(innerOutput), "\n") {
-				if strings.HasPrefix(string(value), previousOutput[len(previousOutput)-1]) {
+				if strings.HasPrefix(string(value), previous_output[len(previous_output)-1]) {
 					filtered = append(filtered, string(value))
 				}
 			}
 
-			shortcutAppender := func(key tea.KeyType, i int, value string) {
-				stripValue := strings.TrimPrefix(value, "\n")
-				if i == keyMaps[key].index && stripValue != "" {
-					key := keyMaps[key]
-					filtered[i] = key.value + " " + value
-				}
-			}
-
 			for i, value := range filtered {
-				shortcutAppender(tea.KeyCtrlA, i, value)
-				shortcutAppender(tea.KeyCtrlS, i, value)
-				shortcutAppender(tea.KeyCtrlD, i, value)
-				shortcutAppender(tea.KeyCtrlQ, i, value)
-				shortcutAppender(tea.KeyCtrlW, i, value)
-				shortcutAppender(tea.KeyCtrlE, i, value)
-				shortcutAppender(tea.KeyCtrlZ, i, value)
-				shortcutAppender(tea.KeyCtrlX, i, value)
+				shortcutAppender(filtered, tea.KeyCtrlA, i, value)
+				shortcutAppender(filtered, tea.KeyCtrlS, i, value)
+				shortcutAppender(filtered, tea.KeyCtrlD, i, value)
+				shortcutAppender(filtered, tea.KeyCtrlQ, i, value)
+				shortcutAppender(filtered, tea.KeyCtrlW, i, value)
+				shortcutAppender(filtered, tea.KeyCtrlE, i, value)
+				shortcutAppender(filtered, tea.KeyCtrlZ, i, value)
+				shortcutAppender(filtered, tea.KeyCtrlX, i, value)
 			}
 
 			return strings.Join(filtered, "\n")
@@ -127,23 +127,15 @@ func listDirectory(path string) string {
 
 		list := strings.Split(string(output), "\n")
 
-		shortcutAppender := func(key tea.KeyType, i int, value string) {
-			stripValue := strings.TrimPrefix(value, "\n")
-			if i == keyMaps[key].index && stripValue != "" {
-				key := keyMaps[key]
-				list[i] = key.value + " " + value
-			}
-		}
-
 		for i, value := range list {
-			shortcutAppender(tea.KeyCtrlA, i, value)
-			shortcutAppender(tea.KeyCtrlS, i, value)
-			shortcutAppender(tea.KeyCtrlD, i, value)
-			shortcutAppender(tea.KeyCtrlQ, i, value)
-			shortcutAppender(tea.KeyCtrlW, i, value)
-			shortcutAppender(tea.KeyCtrlE, i, value)
-			shortcutAppender(tea.KeyCtrlZ, i, value)
-			shortcutAppender(tea.KeyCtrlX, i, value)
+			shortcutAppender(list, tea.KeyCtrlA, i, value)
+			shortcutAppender(list, tea.KeyCtrlS, i, value)
+			shortcutAppender(list, tea.KeyCtrlD, i, value)
+			shortcutAppender(list, tea.KeyCtrlQ, i, value)
+			shortcutAppender(list, tea.KeyCtrlW, i, value)
+			shortcutAppender(list, tea.KeyCtrlE, i, value)
+			shortcutAppender(list, tea.KeyCtrlZ, i, value)
+			shortcutAppender(list, tea.KeyCtrlX, i, value)
 		}
 
 		// 		return strings.Join(list, "\n")
@@ -211,7 +203,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// if last character is not /
 			split_path := strings.Split(updateValue, "/")
 			path_after_last_slash := split_path[len(split_path)-1]
-			// if strings.HasPrefix(remove_tea_key, string(updateValue[len(updateValue)-1])) {
 			if strings.HasPrefix(remove_tea_key, path_after_last_slash) {
 				if string(updateValue[len(updateValue)-1]) != "/" {
 					// apparently i dont need this just yet
@@ -241,7 +232,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.textInput.CursorEnd()
 			return m, cmd
 
-		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyEnter:
+			// in here I want to exit and change the directory to m.textInput.value()
+			return m, tea.Quit
+
+		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 		}
 
