@@ -1,6 +1,6 @@
-// TODO - search through strings that contain substrings
-// TODO - use to lower case so I dont have to type caps
+// Bug: going to a folder and pressing buttons on the left side of the keyboard togther caused a panic
 // TODO - add some colour
+// TODO - add ctrl + backspace so i can delete the whole word and normal backspace to delete letters at a time
 package main
 
 import (
@@ -116,7 +116,9 @@ func listDirectory(path string) string {
 
 			var filtered = []string{}
 			for _, value := range strings.Split(string(innerOutput), "\n") {
-				if strings.HasPrefix(string(value), previous_output[len(previous_output)-1]) {
+				test := strings.ToLower(value)
+				if strings.HasPrefix(test, strings.ToLower(previous_output[len(previous_output)-1])) {
+				// if strings.HasPrefix(string(value), previous_output[len(previous_output)-1]) {
 					filtered = append(filtered, string(value))
 				}
 			}
@@ -147,8 +149,6 @@ func listDirectory(path string) string {
 			shortcutAppender(list, tea.KeyCtrlZ, i, value)
 			shortcutAppender(list, tea.KeyCtrlX, i, value)
 		}
-
-		// 		return strings.Join(list, "\n")
 
 		return strings.Join(list, "\n")
 
@@ -213,7 +213,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// if last character is not /
 			split_path := strings.Split(updateValue, "/")
 			path_after_last_slash := split_path[len(split_path)-1]
-			if strings.HasPrefix(remove_tea_key, path_after_last_slash) {
+			if strings.HasPrefix(strings.ToLower(remove_tea_key), strings.ToLower(path_after_last_slash)) {
 				if string(updateValue[len(updateValue)-1]) != "/" {
 					// apparently i dont need this just yet
 					// updateValue = updateValue + "/"
@@ -243,7 +243,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 
 		case tea.KeyEnter:
-			// in here I want to exit and change the directory to m.textInput.value()
+			// This is not where the program exits. On exit the loops stops running by NewProgram and we return the model.
 			return m, tea.Quit
 
 		case tea.KeyCtrlC, tea.KeyEsc:
